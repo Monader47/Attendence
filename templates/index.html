@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام تسجيل غياب وحضور الطلاب</title>
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #27ae60;
+            --danger-color: #e74c3c;
+            --bg-color: #f4f6f9;
+        }
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 40px;
+        }
+        .navbar-custom {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            opacity: 0.8;
+        }
+        .search-container {
+            position: relative;
+        }
+        .recommendation-box {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: white;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+        }
+        .recommendation-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .recommendation-item:hover, .recommendation-item.active {
+            background-color: #e8f4f8;
+        }
+        .btn-status-present {
+            background-color: #27ae60;
+            color: white;
+        }
+        .btn-status-absent {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .badge-class {
+            background-color: #eef2f7;
+            color: #334155;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+        .student-row {
+            transition: background-color 0.2s;
+        }
+        .student-row.present {
+            background-color: #e8f8f0 !important;
+        }
+        .student-row.absent {
+            background-color: #fdeded !important;
+        }
+        .mobile-url-box {
+            background: #e0f2fe;
+            border: 1px dashed #0284c7;
+            border-radius: 10px;
+            padding: 10px 15px;
+            font-size: 0.9rem;
+            color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <div class="container-fluid navbar-custom mb-4 text-center text-md-start">
+        <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-1"><i class="fa-solid fa-school me-2"></i> مدرسة الهرم للتربية الفكرية</h3>
+                <p class="mb-1 fw-bold opacity-90"><i class="fa-solid fa-clipboard-user me-1"></i> نظام تسجيل حضور اليوم</p>
+                <p class="mb-0 opacity-75" id="current-date-str">التاريخ: جارٍ التحميل...</p>
+            </div>
+            <div class="mt-3 mt-md-0 mobile-url-box d-flex align-items-center gap-2">
+                <i class="fa-solid fa-mobile-screen-button fa-lg"></i>
+                <div>
+                    <strong>للاتصال عبر الموبايل:</strong>
+                    <span id="server-mobile-ip" class="user-select-all fw-bold ms-1">جارٍ التحميل...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Dashboard Statistics Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card stat-card bg-white p-3 text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted d-block small">إجمالي الطلاب</span>
+                            <h3 class="mb-0 fw-bold text-dark" id="stat-total">0</h3>
+                        </div>
+                        <i class="fa-solid fa-users stat-icon text-primary"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card bg-white p-3 text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted d-block small">الحاضرون</span>
+                            <h3 class="mb-0 fw-bold text-success" id="stat-present">0</h3>
+                        </div>
+                        <i class="fa-solid fa-user-check stat-icon text-success"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card bg-white p-3 text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted d-block small">الغياب</span>
+                            <h3 class="mb-0 fw-bold text-danger" id="stat-absent">0</h3>
+                        </div>
+                        <i class="fa-solid fa-user-xmark stat-icon text-danger"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card bg-white p-3 text-center">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted d-block small">نسبة الحضور</span>
+                            <h3 class="mb-0 fw-bold text-info" id="stat-rate">0%</h3>
+                        </div>
+                        <i class="fa-solid fa-chart-pie stat-icon text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Instant Recommendation Controls -->
+        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-magnifying-glass text-primary me-2"></i> التسجيل السريع بالاسم وتصفية الصفوف</h5>
+            
+            <div class="row g-3">
+                <!-- Class Selection Filter -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold">اختيار الصف / الفصل:</label>
+                    <select id="class-filter" class="form-select form-select-lg rounded-3">
+                        <option value="">جميع الصفوف (الكل)</option>
+                    </select>
+                </div>
+
+                <!-- Live Auto-recommendation Input -->
+                <div class="col-12 col-md-8 search-container">
+                    <label class="form-label fw-semibold">ابحث أو اكتب اسم الطالب (تظهر المقترحات تلقائياً):</label>
+                    <div class="input-group input-group-lg">
+                        <input type="text" id="search-input" class="form-select-lg form-control rounded-end-3" placeholder="ابدأ بكتابة اسم الطالب..." autocomplete="off">
+                        <button class="btn btn-success px-4" type="button" id="btn-quick-present">
+                            <i class="fa-solid fa-check me-1"></i> تسجيل حضور
+                        </button>
+                    </div>
+                    <!-- Recommendation Dropdown List -->
+                    <div id="recommendation-list" class="recommendation-box"></div>
+                </div>
+            </div>
+
+            <!-- Action Toolbar Buttons -->
+            <div class="d-flex flex-wrap gap-2 mt-4 pt-2 border-top">
+                <button class="btn btn-outline-success" id="btn-mark-class-present">
+                    <i class="fa-solid fa-check-double me-1"></i> تسجيل حضور كامل الصف المحدد
+                </button>
+                <button class="btn btn-outline-secondary" id="btn-reset-day">
+                    <i class="fa-solid fa-rotate-right me-1"></i> إعادة إعداد قائمة اليوم
+                </button>
+                <a href="/api/download_pdf" target="_blank" class="btn btn-primary ms-auto">
+                    <i class="fa-solid fa-file-pdf me-1"></i> طباعة وتحميل تقرير PDF
+                </a>
+            </div>
+        </div>
+
+        <!-- Student Attendance Interactive Table -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-list-check text-secondary me-2"></i> قائمة الطلاب والغياب اليومي</h5>
+                <span class="badge bg-secondary rounded-pill" id="showing-count-badge">0 طالب</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th class="text-start">اسم الطالب</th>
+                            <th>الصف / الفصل</th>
+                            <th>حالة الحضور</th>
+                            <th>ملاحظات</th>
+                            <th style="width: 160px;">الإجراء السريع</th>
+                        </tr>
+                    </thead>
+                    <tbody id="students-table-body">
+                        <tr>
+                            <td colspan="6" class="py-4 text-muted">جارٍ تحميل بيانات الطلاب...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        let allStudents = [];
+        let classesList = [];
+        let filteredStudents = [];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchInitialData();
+            setupEventListeners();
+        });
+
+        function fetchInitialData() {
+            fetch("/api/data")
+                .then(res => res.json())
+                .then(data => {
+                    allStudents = data.students || [];
+                    classesList = data.classes || [];
+                    document.getElementById("server-mobile-ip").innerText = data.mobile_url || window.location.href;
+                    document.getElementById("current-date-str").innerText = "التاريخ: " + (data.date || new Date().toLocaleDateString('ar-EG'));
+
+                    populateClassesFilter();
+                    applyFilters();
+                })
+                .catch(err => {
+                    console.error("Error fetching data:", err);
+                });
+        }
+
+        function populateClassesFilter() {
+            const filterSelect = document.getElementById("class-filter");
+            filterSelect.innerHTML = '<option value="">جميع الصفوف (الكل)</option>';
+            classesList.forEach(cls => {
+                const opt = document.createElement("option");
+                opt.value = cls;
+                opt.textContent = cls;
+                filterSelect.appendChild(opt);
+            });
+        }
+
+        function setupEventListeners() {
+            const searchInput = document.getElementById("search-input");
+            const classFilter = document.getElementById("class-filter");
+            const recBox = document.getElementById("recommendation-list");
+
+            searchInput.addEventListener("input", function() {
+                const query = this.value.trim().toLowerCase();
+                const selectedClass = classFilter.value;
+
+                updateRecommendations(query, selectedClass);
+                applyFilters();
+            });
+
+            classFilter.addEventListener("change", function() {
+                applyFilters();
+                const query = searchInput.value.trim().toLowerCase();
+                updateRecommendations(query, this.value);
+            });
+
+            document.getElementById("btn-quick-present").addEventListener("click", function() {
+                const query = searchInput.value.trim();
+                if (!query) return;
+
+                // البحث عن أول تطابق ممتاز
+                const matched = allStudents.find(s => s.name === query || s.name.toLowerCase().includes(query.toLowerCase()));
+                if (matched) {
+                    toggleStudentStatus(matched.id, "حاضر");
+                    searchInput.value = "";
+                    recBox.style.display = "none";
+                } else {
+                    alert("لم يتم العثور على طالب بهمن الكلمة!");
+                }
+            });
+
+            document.getElementById("btn-mark-class-present").addEventListener("click", function() {
+                const selectedClass = classFilter.value;
+                if (!selectedClass) {
+                    alert("يرجى اختيار صف محدد من القائمة المنسدلة لتسجيل حضور كافه طلابه.");
+                    return;
+                }
+
+                if (confirm(`هل أنت تأكد من تسجيل حضور جميع طلاب صف (${selectedClass})؟`)) {
+                    fetch("/api/mark_class_present", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ class_name: selectedClass })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        allStudents = data.students;
+                        applyFilters();
+                    });
+                }
+            });
+
+            document.getElementById("btn-reset-day").addEventListener("click", function() {
+                if (confirm("هل تريد إعادة ضبط حضور اليوم لجميع الطلاب؟")) {
+                    fetch("/api/reset_attendance", { method: "POST" })
+                        .then(res => res.json())
+                        .then(data => {
+                            allStudents = data.students;
+                            applyFilters();
+                        });
+                }
+            });
+
+            // إخفاء قائمة التوصيات عند الضغط في أي مكان خارجي
+            document.addEventListener("click", function(e) {
+                if (!e.target.closest(".search-container")) {
+                    recBox.style.display = "none";
+                }
+            });
+        }
+
+        function updateRecommendations(query, selectedClass) {
+            const recBox = document.getElementById("recommendation-list");
+            if (!query) {
+                recBox.style.display = "none";
+                return;
+            }
+
+            let matches = allStudents.filter(s => {
+                const matchClass = !selectedClass || s.class === selectedClass;
+                const matchName = s.name.toLowerCase().includes(query);
+                return matchClass && matchName;
+            }).slice(0, 10); // عرض أفضل 10 نتائج
+
+            if (matches.length === 0) {
+                recBox.innerHTML = '<div class="p-3 text-muted text-center">لا توجد أسماء مطابقة</div>';
+                recBox.style.display = "block";
+                return;
+            }
+
+            recBox.innerHTML = "";
+            matches.forEach(s => {
+                const div = document.createElement("div");
+                div.className = "recommendation-item";
+                const isPresent = s.status === "حاضر";
+                div.innerHTML = `
+                    <div>
+                        <strong class="d-block">${s.name}</strong>
+                        <small class="text-muted"><i class="fa-solid fa-graduation-cap me-1"></i>${s.class}</small>
+                    </div>
+                    <span class="badge ${isPresent ? 'bg-success' : 'bg-secondary'}">${s.status || 'غائب'}</span>
+                `;
+                div.addEventListener("click", function() {
+                    toggleStudentStatus(s.id, "حاضر");
+                    document.getElementById("search-input").value = "";
+                    recBox.style.display = "none";
+                });
+                recBox.appendChild(div);
+            });
+            recBox.style.display = "block";
+        }
+
+        function applyFilters() {
+            const query = document.getElementById("search-input").value.trim().toLowerCase();
+            const selectedClass = document.getElementById("class-filter").value;
+
+            filteredStudents = allStudents.filter(s => {
+                const matchClass = !selectedClass || s.class === selectedClass;
+                const matchName = !query || s.name.toLowerCase().includes(query);
+                return matchClass && matchName;
+            });
+
+            renderTable();
+            updateStats();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById("students-table-body");
+            document.getElementById("showing-count-badge").innerText = `${filteredStudents.length} طالب`;
+
+            if (filteredStudents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-4 text-muted">لا يوجد طلاب يطابقون خيارات البحث الحالية</td></tr>';
+                return;
+            }
+
+            let html = "";
+            filteredStudents.forEach((student, index) => {
+                const isPresent = student.status === "حاضر";
+                const rowClass = isPresent ? "student-row present" : "student-row absent";
+
+                html += `
+                    <tr class="${rowClass}">
+                        <td class="fw-bold">${index + 1}</td>
+                        <td class="text-start fw-bold">${student.name}</td>
+                        <td><span class="badge-class">${student.class}</span></td>
+                        <td>
+                            <span class="badge ${isPresent ? 'bg-success' : 'bg-danger'} px-3 py-2 fs-6">
+                                ${isPresent ? '<i class="fa-solid fa-check me-1"></i> حاضر' : '<i class="fa-solid fa-xmark me-1"></i> غائب'}
+                            </span>
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm text-center" 
+                                value="${student.notes || ''}" 
+                                placeholder="إضافة ملاحظة..." 
+                                onchange="updateNotes(${student.id}, this.value)">
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn ${isPresent ? 'btn-success' : 'btn-outline-success'}" onclick="toggleStudentStatus(${student.id}, 'حاضر')">حاضر</button>
+                                <button type="button" class="btn ${!isPresent ? 'btn-danger' : 'btn-outline-danger'}" onclick="toggleStudentStatus(${student.id}, 'غائب')">غائب</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function toggleStudentStatus(id, newStatus) {
+            fetch("/api/update_status", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id, status: newStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                allStudents = data.students;
+                applyFilters();
+            });
+        }
+
+        function updateNotes(id, notes) {
+            fetch("/api/update_notes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: id, notes: notes })
+            });
+        }
+
+        function updateStats() {
+            const total = allStudents.length;
+            const present = allStudents.filter(s => s.status === "حاضر").length;
+            const absent = total - present;
+            const rate = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+
+            document.getElementById("stat-total").innerText = total;
+            document.getElementById("stat-present").innerText = present;
+            document.getElementById("stat-absent").innerText = absent;
+            document.getElementById("stat-rate").innerText = `${rate}%`;
+        }
+    </script>
+</body>
+</html>
